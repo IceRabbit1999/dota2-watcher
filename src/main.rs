@@ -1,17 +1,25 @@
 mod config;
 mod client;
+mod service;
 
+use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::Read;
+use std::sync::Arc;
 use axum::Router;
 use axum::routing::get;
 use anyhow::Result;
+use axum::extract::{Query, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use chrono::Local;
 use tracing::{info, Level};
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::time::FormatTime;
+use crate::client::Courier;
 use crate::config::Config;
+use crate::service::{latest_match};
 
 
 #[tokio::main]
@@ -27,15 +35,21 @@ async fn main() -> Result<()>{
         .with_timer(LocalTimer);
 
     tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
+        .with_max_level(Level::INFO)
         .with_writer(io::stdout)
         .with_writer(non_blocking)
         .with_ansi(false)
         .event_format(format)
         .init();
 
+    let shared_state = Arc::new(Courier::new());
 
-    let app = Router::new().route("/", get(handler));
+    let app = Router::new()
+
+        .route("/match/latest", get(latest_match))
+        .with_state(shared_state);
+
+
     axum::Server::bind(&"127.0.0.1:3000".parse().unwrap())
         .serve(app.into_make_service())
         .await
@@ -45,16 +59,24 @@ async fn main() -> Result<()>{
     Ok(())
 }
 
-struct LocalTimer;
-
-impl FormatTime for LocalTimer {
-    fn format_time(&self, w: &mut Writer<'_>) -> std::fmt::Result {
-        write!(w, "{}", Local::now().format("%Y-%m-%d %H:%M:%S.%3f"))
+/// Wrapper anyhow:Error so we can impl necessary trait
+pub struct AppError(anyhow::Error);
+/// To make handlers which return Result<AnyType, anyhow::Error> compile because of the trait bound
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Something went wrong: {}", self.0),
+        )
+            .into_response()
     }
 }
 
-async fn handler() -> &'static str {
-    "Hello"
+/// To enable `?` usage
+impl<E> From<E> for AppError where E: Into<anyhow::Error>{
+    fn from(value: E) -> Self {
+        Self(value.into())
+    }
 }
 
 pub fn read_config() -> Config {
@@ -62,6 +84,14 @@ pub fn read_config() -> Config {
     let mut config_str = String::new();
     file.read_to_string(&mut config_str).expect("Reading config/app.toml failed");
     toml::from_str(&config_str).expect("config from str failed")
+}
+
+struct LocalTimer;
+
+impl FormatTime for LocalTimer {
+    fn format_time(&self, w: &mut Writer<'_>) -> std::fmt::Result {
+        write!(w, "{}", Local::now().format("%Y-%m-%d %H:%M:%S.%3f"))
+    }
 }
 
 
