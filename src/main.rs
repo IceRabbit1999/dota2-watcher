@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::Read;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use axum::Router;
 use axum::routing::get;
 use anyhow::Result;
@@ -17,7 +17,7 @@ use chrono::Local;
 use tracing::{info, Level};
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::time::FormatTime;
-use crate::client::Courier;
+use crate::client::{Courier, PlayerPerformance};
 use crate::config::Config;
 use crate::service::{latest_match};
 
@@ -42,12 +42,11 @@ async fn main() -> Result<()>{
         .event_format(format)
         .init();
 
-    let shared_state = Arc::new(Courier::new());
+    let state = AppState::new();
 
     let app = Router::new()
-
         .route("/match/latest", get(latest_match))
-        .with_state(shared_state);
+        .with_state(state);
 
 
     axum::Server::bind(&"127.0.0.1:3000".parse().unwrap())
@@ -94,4 +93,17 @@ impl FormatTime for LocalTimer {
     }
 }
 
+#[derive(Clone)]
+pub struct AppState {
+    pub client: Arc<Courier>,
+    pub cache: Arc<Mutex<HashMap<(String, String), PlayerPerformance>>>
+}
 
+impl AppState {
+    fn new() -> Self {
+        Self {
+            client: Arc::new(Courier::new()),
+            cache: Arc::new(Mutex::new(HashMap::new()))
+        }
+    }
+}

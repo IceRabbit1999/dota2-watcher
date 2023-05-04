@@ -22,6 +22,7 @@ pub struct Courier {
 #[derive(Debug, Serialize)]
 pub struct PlayerPerformance {
     pub account_id: String,
+    pub match_id: String,
     pub hero_id: u32,
     /// Items list, from left to right, top to bottom
     pub item_list: Vec<u32>,
@@ -54,6 +55,7 @@ impl PlayerPerformance {
         let dire_score = value.get("dire_score").unwrap().as_u64().unwrap() as u32;
         let radiant_score = value.get("radiant_score").unwrap().as_u64().unwrap() as u32;
         let radiant_win = value.get("radiant_win").unwrap().as_bool().unwrap();
+        let match_id = value.get("match_id").unwrap().to_string();
 
         for p in players.iter() {
             if p.get("account_id").unwrap().as_u64().unwrap().to_string() == account_id {
@@ -93,6 +95,7 @@ impl PlayerPerformance {
                 return Ok(
                     Self {
                         account_id: account_id.to_string(),
+                        match_id,
                         hero_id,
                         item_list: items,
                         kills,
