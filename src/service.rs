@@ -27,3 +27,19 @@ pub async fn latest_match(State(state): State<AppState>, param: Query<HashMap<St
 
     Ok(Json(performance))
 }
+
+/// Subscribe user with account_id, and save to AppState.
+/// Request example: http://ipaddr:port/subscribe?my_id=xxx&target_id=xxx
+pub async fn subscribe_player(State(state): State<AppState>, param: Query<HashMap<String, String>>) ->Result<Json<HashMap<String, Vec<String>>>, AppError> {
+    let my_id = param.get("my_id").unwrap().to_owned();
+    let target_id = param.get("target_id").unwrap().to_owned();
+    let mut guard = state.subscribe_cache.lock().unwrap();
+    
+    if let Some(sub_list) = guard.get_mut(&my_id) {
+        sub_list.push(target_id);
+    } else {
+        guard.insert(my_id, vec![target_id]);  
+    }
+    
+    Ok(Json(guard.to_owned()))
+}

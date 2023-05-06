@@ -19,7 +19,7 @@ use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::fmt::time::FormatTime;
 use crate::client::{Courier, PlayerPerformance};
 use crate::config::Config;
-use crate::service::{latest_match};
+use crate::service::{latest_match, subscribe_player};
 
 
 #[tokio::main]
@@ -42,10 +42,11 @@ async fn main() -> Result<()>{
         .event_format(format)
         .init();
 
-    let state = AppState::new();
+    let state = AppState::new().await?;
 
     let app = Router::new()
         .route("/match/latest", get(latest_match))
+        .route("/subscribe", get(subscribe_player))
         .with_state(state);
 
 
@@ -96,14 +97,24 @@ impl FormatTime for LocalTimer {
 #[derive(Clone)]
 pub struct AppState {
     pub client: Arc<Courier>,
-    pub cache: Arc<Mutex<HashMap<(String, String), PlayerPerformance>>>
+    pub performance_cache: Arc<Mutex<HashMap<(String, String), PlayerPerformance>>>,
+    pub subscribe_cache: Arc<Mutex<HashMap<String, Vec<String>>>>,
+    pub hero_map: HashMap<u32, String>,
+    pub item_map: HashMap<u32, String>
 }
 
 impl AppState {
-    fn new() -> Self {
-        Self {
-            client: Arc::new(Courier::new()),
-            cache: Arc::new(Mutex::new(HashMap::new()))
-        }
+    async fn new() -> Result<Self> {
+        let client = Courier::new();
+        // init hero and item map
+        let hero_map = client.all_heroes().await?;
+        let item_map = client.all_items().await?;
+        Ok(Self {
+            client: Arc::new(client),
+            performance_cache: Arc::new(Mutex::new(HashMap::new())),
+            subscribe_cache: Arc::new(Mutex::new(HashMap::new())),
+            hero_map,
+            item_map
+        })
     }
 }

@@ -12,6 +12,8 @@ const MATCH_HISTORY: &str = "http://api.steampowered.com/IDOTA2Match_570/GetMatc
 const MATCH_DETAILS: &str = "http://api.steampowered.com/IDOTA2Match_570/GetMatchDetails/v1";
 const ALL_HEROES: &str = "http://api.steampowered.com/IEconDOTA2_570/GetHeroes/v1";
 
+const ALL_ITEMS: &str = "";
+
 pub struct Courier {
     pub client: reqwest::Client,
     /// Steam API key
@@ -179,7 +181,7 @@ impl Courier {
 
 
     /// Return a map with all heroes id and name
-    pub async fn all_heroes(&self) -> Result<HashMap<u64, String>> {
+    pub async fn all_heroes(&self) -> Result<HashMap<u32, String>> {
         let res = self.client.get(ALL_HEROES.to_string())
             .query(&[("key", self.key.clone())])
             .send().await?
@@ -187,8 +189,21 @@ impl Courier {
 
         let hero_list = res.get("result").unwrap().get("heroes").unwrap().as_array().unwrap();
         let map = hero_list.iter()
-            .map(|v| (v.get("id").unwrap().as_u64().unwrap(), v.get("name").unwrap().to_string().replace('\"', "")))
-            .collect::<HashMap<u64, String>>();
+            .map(|v| (v.get("id").unwrap().as_u64().unwrap() as u32, v.get("name").unwrap().to_string().replace('\"', "")))
+            .collect::<HashMap<u32, String>>();
+        Ok(map)
+    }
+
+    pub async fn all_items(&self) -> Result<HashMap<u32, String>> {
+        let res = self.client.get(ALL_ITEMS.to_string())
+            .query(&[("key", self.key.clone())])
+            .send().await?
+            .json::<Value>().await?;
+
+        let item_list = res.get("result").unwrap().get("items").unwrap().as_array().unwrap();
+        let map = item_list.iter()
+            .map(|v| (v.get("id").unwrap().as_u64().unwrap() as u32, v.get("name").unwrap().to_string().replace('\"', "")))
+            .collect::<HashMap<u32, String>>();
         Ok(map)
     }
 }
