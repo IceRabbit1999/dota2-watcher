@@ -1,0 +1,18 @@
+{
+  "name": "wechat",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "start": "ts-node bot.ts"
+  },
+  "author": "IceRabbit",
+  "license": "MIT",
+  "dependencies": {
+    "qrcode-terminal": "^0.12.0",
+    "wechaty": "^1.20.2",
+    "wechaty-puppet-wechat": "^1.18.4"
+  },
+  "devDependencies": {
+    "@types/qrcode-terminal": "^0.12.0"
+  }
+}
