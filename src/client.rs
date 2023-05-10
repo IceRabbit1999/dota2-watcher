@@ -11,8 +11,8 @@ const MATCH_HISTORY: &str = "http://api.steampowered.com/IDOTA2Match_570/GetMatc
 /// More info: https://wiki.teamfortress.com/wiki/WebAPI/GetMatchDetails
 const MATCH_DETAILS: &str = "http://api.steampowered.com/IDOTA2Match_570/GetMatchDetails/v1";
 const ALL_HEROES: &str = "http://api.steampowered.com/IEconDOTA2_570/GetHeroes/v1";
-
-const ALL_ITEMS: &str = "";
+/// This official api doesn't work now :(
+const ALL_ITEMS: &str = "http://api.steampowered.com/IEconDOTA2_570/GetGameItems/v1";
 
 pub struct Courier {
     pub client: reqwest::Client,
@@ -31,9 +31,11 @@ pub struct PlayerPerformance {
     pub kills: u8,
     pub deaths: u8,
     pub assists: u8,
+    pub participation_rate: f32,
     pub last_hits: u32,
     pub denies: u32,
     pub gpm: u32,
+    pub gold: u32,
     pub xpm: u32,
     /// True if player team win the game
     pub win: bool,
@@ -67,6 +69,7 @@ impl PlayerPerformance {
                 let kills = p.get("kills").unwrap().as_u64().unwrap() as u8;
                 let deaths = p.get("deaths").unwrap().as_u64().unwrap() as u8;
                 let gpm = p.get("gold_per_min").unwrap().as_u64().unwrap() as u32;
+                let gold = p.get("gold").unwrap().as_u64().unwrap() as u32 + p.get("gold_spent").unwrap().as_u64().unwrap() as u32;
                 let xpm = p.get("xp_per_min").unwrap().as_u64().unwrap() as u32;
                 let assists = p.get("assists").unwrap().as_u64().unwrap() as u8;
                 let last_hits = p.get("last_hits").unwrap().as_u64().unwrap() as u32;
@@ -83,6 +86,12 @@ impl PlayerPerformance {
                     _ => bail!("Unexpected team number when parse player performance")
                 };
                 let win = radiant && radiant_win || !radiant && !radiant_win;
+
+                // calculate participation_rate
+                let participation_rate = match radiant  {
+                    true => ((kills as u32 + assists as u32) / radiant_score) as f32,
+                    false => ((kills as u32 + assists as u32) / dire_score) as f32
+                };
                 // item list
                 for i in 0..items.capacity() {
                     if i == items.capacity() - 1 {
@@ -102,7 +111,9 @@ impl PlayerPerformance {
                         item_list: items,
                         kills,
                         deaths,
+                        participation_rate,
                         gpm,
+                        gold,
                         xpm,
                         assists,
                         last_hits,
@@ -184,27 +195,30 @@ impl Courier {
     pub async fn all_heroes(&self) -> Result<HashMap<u32, String>> {
         let res = self.client.get(ALL_HEROES.to_string())
             .query(&[("key", self.key.clone())])
+            .query(&[("language", "zh")])
             .send().await?
             .json::<Value>().await?;
 
         let hero_list = res.get("result").unwrap().get("heroes").unwrap().as_array().unwrap();
         let map = hero_list.iter()
-            .map(|v| (v.get("id").unwrap().as_u64().unwrap() as u32, v.get("name").unwrap().to_string().replace('\"', "")))
+            .map(|v| (v.get("id").unwrap().as_u64().unwrap() as u32, v.get("localized_name").unwrap().to_string().replace('\"', "")))
             .collect::<HashMap<u32, String>>();
         Ok(map)
     }
 
     pub async fn all_items(&self) -> Result<HashMap<u32, String>> {
-        let res = self.client.get(ALL_ITEMS.to_string())
-            .query(&[("key", self.key.clone())])
-            .send().await?
-            .json::<Value>().await?;
+        // let res = self.client.get(ALL_ITEMS.to_string())
+        //     .query(&[("key", self.key.clone())])
+        //     .send().await?
+        //     .json::<Value>().await?;
+        //
+        // let item_list = res.get("result").unwrap().get("items").unwrap().as_array().unwrap();
+        // let map = item_list.iter()
+        //     .map(|v| (v.get("id").unwrap().as_u64().unwrap() as u32, v.get("name").unwrap().to_string().replace('\"', "")))
+        //     .collect::<HashMap<u32, String>>();
 
-        let item_list = res.get("result").unwrap().get("items").unwrap().as_array().unwrap();
-        let map = item_list.iter()
-            .map(|v| (v.get("id").unwrap().as_u64().unwrap() as u32, v.get("name").unwrap().to_string().replace('\"', "")))
-            .collect::<HashMap<u32, String>>();
-        Ok(map)
+        // The ALL_ITEMS url doesn't work now, just ignore items map now :(
+        Ok(HashMap::new())
     }
 }
 
