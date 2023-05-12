@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use crate::read_config;
 use anyhow::{bail, Result};
 use reqwest::get;
@@ -88,9 +89,9 @@ impl PlayerPerformance {
                 let win = radiant && radiant_win || !radiant && !radiant_win;
 
                 // calculate participation_rate
-                let participation_rate = match radiant  {
-                    true => ((kills as u32 + assists as u32) / radiant_score) as f32,
-                    false => ((kills as u32 + assists as u32) / dire_score) as f32
+                let participation_rate = match radiant {
+                    true => (kills as f32 + assists as f32) / radiant_score as f32,
+                    false => (kills as f32 + assists as f32) / dire_score as f32
                 };
                 // item list
                 for i in 0..items.capacity() {
@@ -132,6 +133,24 @@ impl PlayerPerformance {
             }
         }
         bail!("Failed to parse PlayerPerformance from value: {}", value);
+    }
+
+    /// Convert performance to a readable string to describe the match result
+    pub fn to_wechat_string(&self, map: &HashMap<u32, String>) -> Result<String> {
+        let hero_name = map.get(&self.hero_id).unwrap();
+
+        let welcome = "欢迎使用看光光功能，下面是本次查询结果:".to_string();
+        let mode = format!("比赛模式：{:?}", self.game_mode);
+        let hero_name = format!("使用英雄：{}", hero_name);
+        let game_result = match self.win {
+            true => "比赛结果: 胜利，可惜了".to_string(),
+            false => "比赛结果：失败！好好好".to_string()
+        };
+
+        let data = format!("本场表现: {}/{}/{}, 参战率: {}, gpm：{}, xpm: {}, 等级：{}, 总经济：{}\n\
+        英雄伤害：{}, 建筑伤害：{}, 治疗：{}", self.kills, self.deaths, self.assists, self.participation_rate , self.gpm, self.xpm, self.level, self.gold, self.hero_damage, self.tower_damage, self.hero_healing);
+
+        Ok(format!("{}\n{}\n{}\n{}\n{}", welcome, mode, hero_name, game_result, data))
     }
 }
 

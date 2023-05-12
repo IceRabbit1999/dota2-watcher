@@ -8,7 +8,7 @@ use crate::client::{Courier, PlayerPerformance};
 
 /// Get the player performance of the latest match by a given account_id.
 /// Request example: http://ipaddr:port/match/latest?account_id=xxx
-pub async fn latest_match(State(state): State<AppState>, param: Query<HashMap<String, String>>) -> Result<Json<PlayerPerformance>, AppError> {
+pub async fn latest_match(State(state): State<AppState>, param: Query<HashMap<String, String>>) -> Result<String, AppError> {
     let account_id = param.0.get("account_id").unwrap().to_owned();
     // get the latest match id
     let res = state.client.match_history_with_account_id(&account_id, 1).await?;
@@ -24,7 +24,7 @@ pub async fn latest_match(State(state): State<AppState>, param: Query<HashMap<St
     //
     // }
 
-    Ok(Json(performance))
+    Ok(performance.to_wechat_string(&state.hero_map)?)
 }
 
 /// Subscribe user with account_id, and save to AppState.
