@@ -2,10 +2,12 @@
 
 [English](README_en.md)
 
-DOTA2 Watcher是一个可以监控群友们的DOTA2战绩，以便在第一时间安慰输掉比赛之后的伤心群友，维护群友之间真挚的情感的小玩具。由两部分组成：
+DOTA2 Watcher是一个可以监控群友们的DOTA2战绩，以便在第一时间安慰输掉比赛之后的伤心群友，维护群友之间真挚情感的小玩具。由两部分组成：
 
-+ Web Server：主要使用Rust + Axum实现
-+ 微信bot：Wechaty实现，主要是Typescript
++ Web Server：Rust + Axum实现
++ 微信bot：Wechaty实现（Typescript）
++ 为什么使用这样画蛇添足的实现方式：hands on Axum and Typescript
+
 
 **注意：强烈建议使用微信小号扫码登陆！！！**
 
