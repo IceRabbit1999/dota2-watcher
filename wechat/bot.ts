@@ -6,7 +6,7 @@ import {
   log,
 }from 'wechaty'
 
-import fetch from 'node-fetch'
+import axios from 'axios'
 
 // this method not work with import, found this link to solve: https://github.com/gtanner/qrcode-terminal/issues/47
 // import { generate } from 'qrcode-terminal'
@@ -46,16 +46,22 @@ async function onMessage (msg: Message) {
         // proactive query for the latest match record of the player with the given account_id
         // @bot q account_id
         if (bot_prefix && cmds[0] === 'q') {
-            let response = await fetch(ipaddr + '/match/latest' + '?account_id=' + cmds[1], {
-                method: 'get',
-                headers: {'Content-Type': 'application/json'}
+            axios({
+                baseURL: ipaddr,
+                url: "/match/latest",
+                method: "get",
+                params: {
+                    account_id: cmds[1]
+                }
             })
-            log.info(await response)
-            if (response.ok) {
-                let json = await response.json()
+                .then(async resp => {
+                    console.log(resp.data)
+                    await msg.say(resp.data)
+                })
+                .catch(e => {
+                    log.error(e)
+                })
 
-                await msg.say(JSON.stringify(json))
-            }
         }
 
 
